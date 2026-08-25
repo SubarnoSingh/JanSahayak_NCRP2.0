@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+# Secrets — never commit real keys. Example files stay tracked.
+.env
+.env.*
+!.env.example
+*.log
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+tsconfig.tsbuildinfo
