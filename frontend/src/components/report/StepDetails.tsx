@@ -6,7 +6,7 @@ import { useComplaint } from "./context";
 import { Badge } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
-import { AiConfirmField, SparkIcon } from "./AiConfirmField";
+import { AiConfirmField, CheckIcon } from "./AiConfirmField";
 
 const CATEGORY_OPTIONS: { value: IncidentCategory; label: string; hint: string }[] = [
   { value: "financial_fraud", label: CATEGORY_LABELS.financial_fraud, hint: "Money was taken or nearly taken" },
@@ -90,7 +90,7 @@ export function StepDetails({ onBack, onNext }: { onBack: () => void; onNext: ()
         <div className="rounded-card border border-navy-border bg-navy-tint/50 p-4 animate-fade-in-up">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Badge tone="info" icon={<SparkIcon />}>
+              <Badge tone="info" icon={<CheckIcon />}>
                 Identified automatically
               </Badge>
               <p className="mt-2 text-sm text-ink">

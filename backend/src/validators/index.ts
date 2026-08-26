@@ -15,12 +15,12 @@ export const updateIncidentSchema = z.object({
   anonymousMode: z.boolean().optional(),
   transaction: z
     .object({
-      utr: z.string().regex(/^\d{12}$/).optional().or(z.literal("")),
+      utr: z.string().max(64).optional().or(z.literal("")),
       amount: z.number().positive().max(100_000_000).optional(),
-      timestamp: z.string().max(64).optional(),
-      senderBank: z.string().max(80).optional(),
-      beneficiaryVpa: z.string().max(120).optional(),
-      method: z.string().max(40).optional(),
+      timestamp: z.string().max(64).optional().or(z.literal("")),
+      senderBank: z.string().max(80).optional().or(z.literal("")),
+      beneficiaryVpa: z.string().max(120).optional().or(z.literal("")),
+      method: z.string().max(40).optional().or(z.literal("")),
     })
     .optional(),
   suspectIdentifiers: z.array(z.object({ type: z.string(), value: z.string().min(2).max(300), context: z.string().optional() })).max(30).optional(),

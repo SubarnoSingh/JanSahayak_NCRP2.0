@@ -28,8 +28,8 @@ export function AiConfirmField({
       <div className="rounded-card border border-navy-border bg-navy-tint/50 p-3.5 animate-fade-in-up">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <Badge tone="info" icon={<SparkIcon />}>
-              Detected automatically
+            <Badge tone="info" icon={<CheckIcon />}>
+              Found in evidence
             </Badge>
             <p className="mt-1.5 text-2xs text-ink-faint">{label}</p>
             <p className="mt-0.5 truncate font-mono text-sm font-medium text-ink">
@@ -86,8 +86,8 @@ export function AiConfirmField({
   );
 }
 
-export const SparkIcon = () => (
+export const CheckIcon = () => (
   <svg viewBox="0 0 16 16" className="h-3 w-3" fill="currentColor" aria-hidden>
-    <path d="M8 1.5 9.6 6l4.4 1.5L9.6 9 8 13.5 6.4 9 2 7.5 6.4 6 8 1.5ZM13 11l.8 2.2L16 14l-2.2.8L13 17l-.8-2.2L10 14l2.2-.8L13 11Z" transform="scale(.85)" />
+    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16Zm3.7-9.3-4.2 4.2a1 1 0 0 1-1.4 0L4.3 9.1a1 1 0 0 1 1.4-1.4l1.1 1.08 3.5-3.48a1 1 0 0 1 1.4 1.4Z" />
   </svg>
 );

@@ -1,3 +1,5 @@
+import fs from "fs/promises";
+import path from "path";
 import type { Request, Response, NextFunction } from "express";
 import { Incident } from "../models/Incident";
 import { Officer } from "../models/Officer";
@@ -147,7 +149,37 @@ export const dossier = asyncH(async (req, res) => {
     res.status(404).json({ error: { code: "NOT_FOUND", message: "Incident not found." } });
     return;
   }
+  console.log(`[pdf] dossier generation started — incident ${String(incident._id)}, ${incident.evidence.length} evidence item(s)`);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${incident.acknowledgementNumber}-dossier.pdf"`);
   renderDossier(incident).pipe(res);
+});
+
+/** GET /api/officer/incidents/:id/evidence/:evidenceId/file — serve the actual uploaded evidence file */
+export const serveEvidenceFile = asyncH(async (req, res) => {
+  await requireOfficer(req, res, () => undefined);
+  if (!(req as Request & { officer?: unknown }).officer) return;
+  const incident = await Incident.findById(req.params.id);
+  if (!incident) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Incident not found." } });
+    return;
+  }
+  const ev = incident.evidence.find((e) => e.evidenceId === req.params.evidenceId);
+  if (!ev) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Evidence not found." } });
+    return;
+  }
+  const filePath = path.resolve(process.cwd(), config.uploads.dir, ev.storedName);
+  try {
+    await fs.access(filePath);
+  } catch {
+    res.status(404).json({ error: { code: "FILE_MISSING", message: "Evidence file is no longer available on disk." } });
+    return;
+  }
+  console.log(`[io] evidence served — ${ev.originalName} (${ev.mimeType}) for incident ${String(incident._id)}`);
+  res.setHeader("Content-Type", ev.mimeType || "application/octet-stream");
+  res.setHeader("Content-Disposition", `inline; filename="${ev.originalName}"`);
+  res.setHeader("Cache-Control", "private, max-age=3600");
+  const stream = (await import("fs")).createReadStream(filePath);
+  stream.pipe(res);
 });

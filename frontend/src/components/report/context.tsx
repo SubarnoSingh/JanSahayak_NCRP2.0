@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { EvidenceMeta, IncidentCategory, Incident, Transaction } from "@/lib/types";
+import type { EvidenceMeta, IncidentCategory, Incident, Transaction, EvidenceExtraction } from "@/lib/types";
 
 export interface ComplaintState {
   incidentId: string | null;
@@ -19,6 +19,8 @@ export interface ComplaintState {
   aiTransactionHints: Partial<Transaction> | null;
   suspectIdentifiers: { type: string; value: string; context?: string }[];
   evidence: EvidenceMeta[];
+  evidenceExtractions: EvidenceExtraction[];
+  extractedFields: Partial<Record<string, { value: string; source: string }>>;
   anonymousMode: boolean;
   contact: { fullName: string; phone: string; email: string; state: string; district: string };
   readinessScore: number;
@@ -39,6 +41,8 @@ const initialState: ComplaintState = {
   aiTransactionHints: null,
   suspectIdentifiers: [],
   evidence: [],
+  evidenceExtractions: [],
+  extractedFields: {},
   anonymousMode: false,
   contact: { fullName: "", phone: "", email: "", state: "", district: "" },
   readinessScore: 0,
@@ -90,6 +94,10 @@ export function ComplaintProvider({ children }: { children: ReactNode }) {
 
   const applyIncident = useCallback(
     (incident: Incident) => {
+      const txn = incident.financial_transactions?.[0];
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[pipeline:4] applyIncident — first txn:", JSON.stringify(txn));
+      }
       update({
         incidentId: incident.id,
         narrative: incident.narrative_raw ?? "",
@@ -100,10 +108,42 @@ export function ComplaintProvider({ children }: { children: ReactNode }) {
         readinessBreakdown: incident.readiness_breakdown,
         evidence: incident.evidence,
         anonymousMode: incident.anonymousMode,
-        ...(incident.financial_transactions?.[0] && !incident.financial_transactions[0].verifiedByCitizen
-          ? { aiTransactionHints: incident.financial_transactions[0] }
+        ...(txn && !txn.verifiedByCitizen && txn.source !== "citizen"
+          ? { aiTransactionHints: txn }
+          : {}),
+        ...(txn
+          ? {
+              transaction: {
+                utr: txn.utr ?? "",
+                amount: txn.amount != null ? String(txn.amount) : "",
+                timestamp: txn.timestamp ?? "",
+                senderBank: txn.senderBank ?? "",
+                beneficiaryVpa: txn.beneficiaryVpa ?? "",
+              },
+            }
+          : {}),
+        ...(incident.citizenContact
+          ? {
+              contact: {
+                fullName: incident.citizenContact.fullName ?? "",
+                phone: incident.citizenContact.phone ?? "",
+                email: incident.citizenContact.email ?? "",
+                state: incident.citizenContact.state ?? "",
+                district: incident.citizenContact.district ?? "",
+              },
+            }
           : {}),
       });
+      // Rebuild evidence extractions from stored aiExtraction data
+      if (incident.evidence?.length) {
+        const extractions: EvidenceExtraction[] = incident.evidence
+          .filter((e) => e.hasAiExtraction)
+          .map((e) => ({
+            evidenceId: e.evidenceId,
+            originalName: e.originalName,
+          }));
+        if (extractions.length) update({ evidenceExtractions: extractions });
+      }
     },
     [update]
   );

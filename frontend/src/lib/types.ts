@@ -144,6 +144,72 @@ export const CATEGORY_LABELS: Record<IncidentCategory, string> = {
   other_cyber_crime: "Other cyber crime",
 };
 
+/** Fields auto-extracted from evidence with confidence + source tracking. */
+export interface ExtractedField<T = string> {
+  value: T;
+  confidence: number;
+  source: string;
+  evidenceId?: string;
+}
+
+export interface EvidenceExtraction {
+  evidenceId: string;
+  originalName: string;
+  amount?: ExtractedField<number>;
+  utr?: ExtractedField<string>;
+  timestamp?: ExtractedField<string>;
+  beneficiaryVpa?: ExtractedField<string>;
+  senderBank?: ExtractedField<string>;
+}
+
+export const ANONYMOUS_ALLOWED_CATEGORIES: IncidentCategory[] = ["women_child_safety"];
+
+export function isFinancialFraud(category: IncidentCategory | null | undefined): boolean {
+  return category === "financial_fraud";
+}
+
+export const CATEGORY_CONFIG: Record<IncidentCategory, {
+  isFinancial: boolean;
+  showTransactionExtraction: boolean;
+  showManualEvidence: boolean;
+  showResponseWindow: boolean;
+  showSmsPaste: boolean;
+  showSuspectField: boolean;
+}> = {
+  financial_fraud: {
+    isFinancial: true,
+    showTransactionExtraction: true,
+    showManualEvidence: true,
+    showResponseWindow: true,
+    showSmsPaste: true,
+    showSuspectField: true,
+  },
+  harassment_extortion: {
+    isFinancial: false,
+    showTransactionExtraction: false,
+    showManualEvidence: false,
+    showResponseWindow: false,
+    showSmsPaste: false,
+    showSuspectField: true,
+  },
+  women_child_safety: {
+    isFinancial: false,
+    showTransactionExtraction: false,
+    showManualEvidence: false,
+    showResponseWindow: false,
+    showSmsPaste: false,
+    showSuspectField: true,
+  },
+  other_cyber_crime: {
+    isFinancial: false,
+    showTransactionExtraction: false,
+    showManualEvidence: false,
+    showResponseWindow: false,
+    showSmsPaste: false,
+    showSuspectField: true,
+  },
+};
+
 export const STATUS_META: Record<string, { label: string; tone: "ok" | "info" | "warn" | "neutral" }> = {
   draft: { label: "Draft", tone: "neutral" },
   signed: { label: "Signed", tone: "info" },

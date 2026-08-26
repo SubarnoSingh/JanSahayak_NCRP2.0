@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 interface FooterLink {
   label: string;
   href: string;
-  externalAnchor?: boolean;
+  external?: boolean;
 }
 
 const columns: { titleKey: string; links: FooterLink[] }[] = [
@@ -30,11 +30,10 @@ const columns: { titleKey: string; links: FooterLink[] }[] = [
   {
     titleKey: "footer.govServices",
     links: [
-      { label: "TAFCOP", href: "/services#tafcop", externalAnchor: true },
-      { label: "CEIR", href: "/services#ceir", externalAnchor: true },
-      { label: "GAC Appeal", href: "/services#gac", externalAnchor: true },
-      { label: "CPGRAMS", href: "/services#cpgrams", externalAnchor: true },
-      { label: "RTI", href: "/services#rti", externalAnchor: true },
+      { label: "CEIR", href: "https://www.ceir.gov.in", external: true },
+      { label: "GAC Appeal", href: "https://cybercrime.gov.in/Webform/Accept.aspx?pid=10", external: true },
+      { label: "CPGRAMS", href: "https://pgportal.gov.in", external: true },
+      { label: "RTI", href: "https://rtionline.gov.in", external: true },
     ],
   },
   {
@@ -61,12 +60,23 @@ export function Footer() {
               <ul className="mt-3 space-y-2">
                 {col.links.map((l) => (
                   <li key={l.href + l.label}>
-                    <Link
-                      href={l.href}
-                      onClick={l.externalAnchor ? undefined : (e) => stubNav(e, l.href)}                      className="text-sm text-ink-soft transition-colors hover:text-navy"
-                    >
-                      {t(l.label)}
-                    </Link>
+                    {l.external ? (
+                      <a
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-ink-soft transition-colors hover:text-navy"
+                      >
+                        {t(l.label)}
+                      </a>
+                    ) : (
+                      <Link
+                        href={l.href}
+                        className="text-sm text-ink-soft transition-colors hover:text-navy"
+                      >
+                        {t(l.label)}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -89,12 +99,4 @@ export function Footer() {
       </div>
     </footer>
   );
-}
-
-function stubNav(e: React.MouseEvent, href: string) {
-  // Pages marked as placeholders in the demo stay on the current page with a notice.
-  if (["/about", "/accessibility", "/privacy", "/terms", "/contact"].some((p) => href.startsWith(p)) || href.startsWith("/services")) {
-    e.preventDefault();
-    window.dispatchEvent(new CustomEvent("ncrp:toast", { detail: { title: "Placeholder page", body: "This section is a structural placeholder in the demo build." } }));
-  }
 }

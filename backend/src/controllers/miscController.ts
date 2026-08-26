@@ -1,4 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
+import fs from "fs";
+import path from "path";
 import { suspectSearchSchema, suspectReportSchema, volunteerSchema, validationError } from "../validators";
 import { searchSuspects, reportSuspect } from "../services/suspectService";
 import { Suspect } from "../models/Suspect";
@@ -146,4 +148,25 @@ export const ceirBlock = asyncH(async (req, res) => {
     return;
   }
   res.json(result.result);
+});
+
+/** GET /api/directory.pdf */
+export const directoryPdf = asyncH(async (_req, res) => {
+  const { renderDirectoryPdf } = await import("../services/pdfService");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", 'attachment; filename="ncrp-state-ut-officer-directory.pdf"');
+  renderDirectoryPdf().pipe(res);
+});
+
+/** GET /api/mockdata/test-evidence — serves the mock test evidence image for demo/testing purposes. */
+export const testEvidenceDownload = asyncH(async (_req, res) => {
+  // Resolve relative to compiled JS location: dist/controllers/ → ../../../mockdata/
+  const filePath = path.resolve(__dirname, "../../..", "mockdata", "telegram_job_scam.png");
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: { code: "NOT_FOUND", message: "Test evidence is currently unavailable." } });
+    return;
+  }
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Content-Disposition", 'attachment; filename="telegram_job_scam.png"');
+  fs.createReadStream(filePath).pipe(res);
 });

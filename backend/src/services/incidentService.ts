@@ -109,6 +109,25 @@ export async function submitIncident(incidentId: string): Promise<IIncident> {
   if (incident.signature_status !== "signed") throw new Error("Complaint must be digitally signed before submission.");
   if (incident.status !== "draft") throw new Error("Complaint already submitted.");
 
+  // ── Anonymous submission: only Women & Child Safety ──
+  if (incident.anonymousMode && incident.incident_category !== "women_child_safety") {
+    throw Object.assign(
+      new Error("Anonymous submission is only available for Women & Child Safety complaints."),
+      { code: "ANONYMOUS_NOT_ALLOWED" }
+    );
+  }
+
+  // ── Contact details required for non-anonymous complaints ──
+  if (!incident.anonymousMode) {
+    const c = incident.citizenContact;
+    if (!c?.fullName?.trim() || !c?.phone?.trim() || !c?.email?.trim() || !c?.state?.trim() || !c?.district?.trim()) {
+      throw Object.assign(
+        new Error("Please provide your full name, mobile number, email, state and district before submitting."),
+        { code: "CONTACT_REQUIRED" }
+      );
+    }
+  }
+
   incident.acknowledgementNumber = generateAcknowledgementNumber();
   incident.status = "submitted";
   incident.acknowledgementIssuedAt = new Date();

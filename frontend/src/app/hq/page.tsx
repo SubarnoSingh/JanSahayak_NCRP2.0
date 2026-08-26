@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, API_URL } from "@/lib/api";
 import { getSocket } from "@/lib/socket";
 import { useHqAuth, HqAuthProvider, type Officer } from "@/components/io/auth";
 import { GoldenHourBar } from "@/components/io/GoldenHourBar";
@@ -9,7 +9,8 @@ import { MoneyTrail, type TrailEdge, type TrailNode } from "@/components/io/Mone
 import { Badge, Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, Skeleton } from "@/components/ui/Misc";
-import { CATEGORY_LABELS, type IncidentStatus } from "@/lib/types";
+import { EvidenceImage } from "@/components/io/EvidenceImage";
+import { CATEGORY_LABELS, isFinancialFraud, type IncidentStatus } from "@/lib/types";
 
 export default function HqPage() {
   return (
@@ -116,7 +117,9 @@ function HqInner() {
           <div className="mx-auto flex max-w-7xl items-center gap-3 text-sm">
             <span aria-hidden>🚨</span>
             <p className="font-semibold text-[#3d2b06]">{liveBanner}</p>
-            <p className="text-xs text-[#6b4e12]">Golden-hour response recommended</p>
+            {isFinancialFraud(queue?.find((i) => i.id === selectedId)?.category as any) && (
+              <p className="text-xs text-[#6b4e12]">Golden-hour response recommended</p>
+            )}
           </div>
         </div>
       )}
@@ -265,7 +268,7 @@ function IncidentDetail({ id, onChanged }: { id: string; onChanged: () => void }
         </div>
       </Card>
 
-      {gh && (
+      {gh && isFinancialFraud(incident.incident_category as any) && (
         <GoldenHourBar
           startedAt={String(gh.startedAt)}
           stages={{
@@ -295,20 +298,55 @@ function IncidentDetail({ id, onChanged }: { id: string; onChanged: () => void }
               <p className="text-sm text-white/50">No files attached.</p>
             ) : (
               <ul className="space-y-2">
-                {evidence.map((e) => (
-                  <li key={String(e.evidenceId)} className="rounded-control border border-white/10 bg-white/[0.03] p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-white/90">{String(e.originalName)}</p>
-                      <span className="shrink-0 text-2xs text-white/45">{Math.round(Number(e.sizeBytes) / 1024)} KB</span>
-                    </div>
-                    <p className="mt-1 break-all font-mono text-[10px] leading-relaxed text-white/40">sha256:{String(e.sha256)}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-2 text-2xs">
-                      {Boolean(e.hashVerifiedServer) && <Badge tone="ok" className="!bg-ok/20 !text-ok">server hash ✓</Badge>}
-                      {Boolean(e.exifScrubbed) && <Badge tone="info" className="!bg-navy/60 !text-white/80">metadata scrubbed</Badge>}
-                      <Badge tone="neutral" className="!bg-white/10 !text-white/60">{String(e.mimeType)}</Badge>
-                    </div>
-                  </li>
-                ))}
+                {evidence.map((e) => {
+                  const mime = String(e.mimeType || "");
+                  const isImage = mime.startsWith("image/");
+                  return (
+                    <li key={String(e.evidenceId)} className="rounded-control border border-white/10 bg-white/[0.03] p-3">
+                      {isImage && (
+                        <div className="mb-2 overflow-hidden rounded-control border border-white/10 bg-black/20">
+                          <EvidenceImage
+                            incidentId={id}
+                            evidenceId={String(e.evidenceId)}
+                            token={token}
+                            alt={String(e.originalName)}
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-white/90">{String(e.originalName)}</p>
+                        <span className="shrink-0 text-2xs text-white/45">{Math.round(Number(e.sizeBytes) / 1024)} KB</span>
+                      </div>
+                      <p className="mt-1 break-all font-mono text-[10px] leading-relaxed text-white/40">sha256:{String(e.sha256)}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-2 text-2xs">
+                        {Boolean(e.hashVerifiedServer) && <Badge tone="ok" className="!bg-ok/20 !text-ok">integrity verified</Badge>}
+                        {Boolean(e.exifScrubbed) && <Badge tone="info" className="!bg-navy/60 !text-white/80">metadata scrubbed</Badge>}
+                        <Badge tone="neutral" className="!bg-white/10 !text-white/60">{String(e.mimeType)}</Badge>
+                      </div>
+                      {isImage && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`${API_URL}/api/officer/incidents/${id}/evidence/${String(e.evidenceId)}/file`, {
+                                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                              });
+                              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                              const blob = await res.blob();
+                              const blobUrl = URL.createObjectURL(blob);
+                              window.open(blobUrl, "_blank");
+                            } catch {
+                              /* could not open */
+                            }
+                          }}
+                          className="mt-2 text-2xs font-medium text-saffron hover:underline"
+                        >
+                          Open full size
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Panel>
@@ -330,14 +368,20 @@ function IncidentDetail({ id, onChanged }: { id: string; onChanged: () => void }
         {/* RIGHT: AI extraction + actions */}
         <div className="space-y-4">
           <Panel title="AI extraction">
-            <dl className="grid grid-cols-2 gap-3">
-              <Field label="UTR / RRN" value={txn?.utr as string} mono />
-              <Field label="Amount" value={txn?.amount != null ? `₹${Number(txn.amount).toLocaleString("en-IN")}` : undefined} />
-              <Field label="Beneficiary VPA" value={txn?.beneficiaryVpa as string} mono />
-              <Field label="Method" value={txn?.method as string} />
-              <Field label="Category confidence" value={incident.categoryConfidence != null ? `${Math.round(Number(incident.categoryConfidence) * 100)}%` : undefined} />
-              <Field label="Txn timestamp" value={txn?.timestamp ? new Date(String(txn.timestamp)).toLocaleString("en-IN") : undefined} />
-            </dl>
+            {isFinancialFraud(incident.incident_category as any) ? (
+              <dl className="grid grid-cols-2 gap-3">
+                <Field label="UTR / RRN" value={txn?.utr as string} mono />
+                <Field label="Amount" value={txn?.amount != null ? `₹${Number(txn.amount).toLocaleString("en-IN")}` : undefined} />
+                <Field label="Beneficiary VPA" value={txn?.beneficiaryVpa as string} mono />
+                <Field label="Method" value={txn?.method as string} />
+                <Field label="Category confidence" value={incident.categoryConfidence != null ? `${Math.round(Number(incident.categoryConfidence) * 100)}%` : undefined} />
+                <Field label="Txn timestamp" value={txn?.timestamp ? new Date(String(txn.timestamp)).toLocaleString("en-IN") : undefined} />
+              </dl>
+            ) : (
+              <dl className="grid grid-cols-2 gap-3">
+                <Field label="Category confidence" value={incident.categoryConfidence != null ? `${Math.round(Number(incident.categoryConfidence) * 100)}%` : undefined} />
+              </dl>
+            )}
           </Panel>
 
           <Panel title="Provisional legal mapping">
@@ -355,12 +399,36 @@ function IncidentDetail({ id, onChanged }: { id: string; onChanged: () => void }
           {/* Actions */}
           <Panel title="Actions">
             <div className="flex flex-wrap gap-2">
-              <Button size="md" variant="outlineDanger" onClick={() => void freeze()} disabled={freezeBusy}>
-                {freezeBusy ? "Requesting…" : "Confirm & Trigger 1930 Freeze"}
+              {isFinancialFraud(incident.incident_category as any) && (
+                <Button size="md" variant="outlineDanger" onClick={() => void freeze()} disabled={freezeBusy}>
+                  {freezeBusy ? "Requesting…" : "Confirm & Trigger 1930 Freeze"}
+                </Button>
+              )}
+              <Button
+                size="md"
+                variant="secondary"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_URL}/api/officer/incidents/${id}/dossier.pdf`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${incident.acknowledgementNumber || "NCRP"}-dossier.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    window.open(`${API_URL}/api/officer/incidents/${id}/dossier.pdf`, "_blank");
+                  }
+                }}
+              >
+                Generate Dossier (PDF)
               </Button>
-              <a href={`/api/officer/incidents/${id}/dossier.pdf`} target="_blank" rel="noopener noreferrer">
-                <Button size="md" variant="secondary">Generate Dossier (PDF)</Button>
-              </a>
             </div>
             {freezeResult && (
               <p role="status" className="mt-3 rounded-control border border-ok/40 bg-ok/10 px-3 py-2 text-xs font-medium text-ok">
@@ -369,9 +437,11 @@ function IncidentDetail({ id, onChanged }: { id: string; onChanged: () => void }
             )}
           </Panel>
 
-          <Panel title="Money trail">
-            <MoneyTrail nodes={trail?.nodes ?? []} edges={trail?.edges ?? []} />
-          </Panel>
+          {isFinancialFraud(incident.incident_category as any) && (
+            <Panel title="Money trail">
+              <MoneyTrail nodes={trail?.nodes ?? []} edges={trail?.edges ?? []} />
+            </Panel>
+          )}
 
           <Panel title="Status history">
             <ol className="space-y-1.5">

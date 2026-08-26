@@ -3,16 +3,16 @@
   "gov.identity.line2": "Indian Cyber Crime Coordination Centre",
   "gov.identity.demoBadge": "Hackathon prototype · synthetic data",
   "nav.report": "Report",
-  "nav.track": "Track",
   "nav.protect": "Protect",
   "nav.learn": "Learn",
+  "nav.contact": "Contact",
   "nav.help": "Help",
   "nav.accessibility": "Accessibility",
   "nav.trackComplaint": "Track Complaint",
   "header.skipToContent": "Skip to main content",
 
   "hero.title": "Report cybercrime without navigating a maze.",
-  "hero.subtitle": "One official gateway for reporting cybercrime — guided, confidential, and available in your language.",
+  "hero.subtitle": "Report cybercrime easily \u2013 guided, multilingual, secure, and backed by verified e-signing.",
   "hero.noLegalTerms": "No legal terminology needed. No lengthy forms to start.",
 
   "cta.eyebrow": "Complaint filing service",

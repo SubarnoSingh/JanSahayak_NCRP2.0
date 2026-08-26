@@ -156,8 +156,8 @@ function LearningPreview() {
       .catch(() => setFailed(true));
   }, []);
 
-  const trending = resources?.find((r) => r.trending) ?? resources?.[0];
-  const rest = resources?.filter((r) => r !== trending).slice(0, 6) ?? [];
+  const trending = resources?.filter((r) => r.trending) ?? [];
+  const rest = resources?.filter((r) => !r.trending).slice(0, 6) ?? [];
 
   return (
     <section aria-labelledby="learn-heading" className="mx-auto mt-14 w-full max-w-6xl px-4 sm:px-6">
@@ -168,72 +168,76 @@ function LearningPreview() {
         </Link>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-5">
-        {/* Featured trending card */}
-        {resources === null && !failed && (
-          <>
-            <Skeleton className="h-44 lg:col-span-2" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-24" />
-              ))}
-            </div>
-          </>
-        )}
-        {trending && (
-          <Link href={`/learn/${trending.slug}`} className="group block lg:col-span-2">
-            <Card className="relative h-full overflow-hidden border-navy/20 bg-gradient-to-br from-navy to-navy-deep p-5 text-white transition-shadow group-hover:shadow-raised">
-              <Badge tone="saffron" className="bg-saffron !text-white">
-                <span aria-hidden>📈</span> {t("learn.trending")}
-              </Badge>
-              <h3 className="mt-3 text-lg font-semibold leading-snug">{trending.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-white/75 line-clamp-3">{trending.summary}</p>
-              <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-white/95">
-                {t("learn.readGuide")} · {trending.readMinutes} {t("learn.minutes")}
-                <svg viewBox="0 0 16 16" className="h-3 w-3 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                  <path d="m5.5 3 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </Card>
-          </Link>
-        )}
-
-        {/* Smaller guide cards + scam alerts strip */}
-        <div className="lg:col-span-3">
-          {alerts.length > 0 && (
-            <div className="mb-3 rounded-card border border-line bg-warn-tint/60 px-4 py-3">
-              <p className="flex items-start gap-2 text-xs leading-relaxed text-ink-soft">
-                <svg viewBox="0 0 20 20" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" aria-hidden>
-                  <path d="M10 2 1.5 17h17L10 2Zm0 4a1 1 0 0 1 1 1v4.5a1 1 0 1 1-2 0V7a1 1 0 0 1 1-1Zm0 8.6a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z" />
-                </svg>
-                <span>
-                  <strong className="font-semibold text-ink">{alerts[0].title}.</strong>{" "}
-                  <Link href="/learn#alerts" className="underline decoration-dotted underline-offset-2 hover:text-navy">
-                    See all current scam alerts
-                  </Link>
-                </span>
-              </p>
-            </div>
-          )}
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {rest.map((r) => (
-              <li key={r.slug}>
-                <Link
-                  href={`/learn/${r.slug}`}
-                  className="group block h-full rounded-card border border-line bg-surface p-3.5 shadow-card transition-all hover:border-navy-border hover:shadow-raised"
-                >
-                  <p className="text-2xs font-medium uppercase tracking-wide text-saffron-deep">{r.scamType}</p>
-                  <h4 className="mt-1 text-sm font-semibold leading-snug text-ink">{r.title}</h4>
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-faint">{r.summary}</p>
-                  <span className="mt-2 inline-block text-2xs font-medium text-navy opacity-0 transition-opacity group-hover:opacity-100">
-                    {t("learn.readGuide")} →
-                  </span>
-                </Link>
-              </li>
+      {resources === null && !failed && (
+        <div className="mt-5 grid gap-4 lg:grid-cols-5">
+          <Skeleton className="h-44 lg:col-span-2" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:col-span-3 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-24" />
             ))}
-          </ul>
+          </div>
         </div>
-      </div>
+      )}
+
+      {trending.length > 0 && (
+        <div className="mt-5 grid gap-4 lg:grid-cols-5">
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            <p className="text-sm font-semibold uppercase tracking-wider text-ink">{t("learn.trending")}</p>
+            {trending.map((r) => (
+              <Link key={r.slug} href={`/learn/${r.slug}`} className="group block">
+                <Card className="relative h-full overflow-hidden border-navy/20 bg-gradient-to-br from-navy to-navy-deep p-5 text-white transition-shadow group-hover:shadow-raised">
+                  <Badge tone="saffron" className="bg-saffron !text-ink">
+                    <span aria-hidden>📈</span> {t("learn.trending")}
+                  </Badge>
+                  <h3 className="mt-3 text-lg font-semibold leading-snug">{r.title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-white/75 line-clamp-3">{r.summary}</p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-white/95">
+                    {t("learn.readGuide")} · {r.readMinutes} {t("learn.minutes")}
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                      <path d="m5.5 3 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          <div className="lg:col-span-3">
+            {alerts.length > 0 && (
+              <div className="mb-3 rounded-card border border-line bg-warn-tint/60 px-4 py-3">
+                <p className="flex items-start gap-2 text-xs leading-relaxed text-ink-soft">
+                  <svg viewBox="0 0 20 20" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warn" fill="currentColor" aria-hidden>
+                    <path d="M10 2 1.5 17h17L10 2Zm0 4a1 1 0 0 1 1 1v4.5a1 1 0 1 1-2 0V7a1 1 0 0 1 1-1Zm0 8.6a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z" />
+                  </svg>
+                  <span>
+                    <strong className="font-semibold text-ink">{alerts[0].title}.</strong>{" "}
+                    <Link href="/learn#alerts" className="underline decoration-dotted underline-offset-2 hover:text-navy">
+                      See all current scam alerts
+                    </Link>
+                  </span>
+                </p>
+              </div>
+            )}
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {rest.map((r) => (
+                <li key={r.slug}>
+                  <Link
+                    href={`/learn/${r.slug}`}
+                    className="group block h-full rounded-card border border-line bg-surface p-3.5 shadow-card transition-all hover:border-navy-border hover:shadow-raised"
+                  >
+                    <p className="text-2xs font-medium uppercase tracking-wide text-saffron-deep">{r.scamType}</p>
+                    <h4 className="mt-1 text-sm font-semibold leading-snug text-ink">{r.title}</h4>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-faint">{r.summary}</p>
+                    <span className="mt-2 inline-block text-2xs font-medium text-navy opacity-0 transition-opacity group-hover:opacity-100">
+                      {t("learn.readGuide")} →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -242,7 +246,6 @@ function LearningPreview() {
 function GovServicesRow() {
   const { t } = useI18n();
   const services = [
-    { name: "TAFCOP", desc: "Check mobile connections registered in your name", url: "https://tafcop.dgtelecom.gov.in" },
     { name: "CEIR", desc: "Block & trace lost or stolen mobile devices", url: "https://www.ceir.gov.in" },
     { name: "GAC — Cyber Crime Victims Assistance", desc: "Appeal for assistance with frozen accounts", url: "https://cybercrime.gov.in/Webform/Accept.aspx?pid=10" },
     { name: "CPGRAMS", desc: "Centralized public grievance redress system", url: "https://pgportal.gov.in" },

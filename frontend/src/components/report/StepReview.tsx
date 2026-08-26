@@ -29,7 +29,7 @@ export function StepReview({ onBack, onEdit, onNext }: { onBack: () => void; onE
             </div>
           </Card>
 
-          {/* Important details */}
+          {/* Transaction details */}
           {(Object.values(c.transaction).some((v) => v) || c.suspectIdentifiers.length > 0) && (
             <Card className="p-4 sm:p-5">
               <SectionHeader title="Important details" onEdit={() => onEdit(1)} />
@@ -59,7 +59,7 @@ export function StepReview({ onBack, onEdit, onNext }: { onBack: () => void; onE
 
           {/* Evidence */}
           <Card className="p-4 sm:p-5">
-            <SectionHeader title="Evidence" onEdit={() => onEdit(2)} />
+            <SectionHeader title="Evidence" onEdit={() => onEdit(1)} />
             <p className="text-sm text-ink">
               {c.evidence.length > 0
                 ? `${c.evidence.length} file${c.evidence.length === 1 ? "" : "s"} · integrity verified`
@@ -83,9 +83,17 @@ export function StepReview({ onBack, onEdit, onNext }: { onBack: () => void; onE
           {/* Privacy + signature */}
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="p-4 sm:p-5">
-              <SectionHeader title="Privacy" onEdit={() => onEdit(1)} />
-              <StatusRow label="Anonymous mode" value={c.anonymousMode ? "On" : "Off"} tone={c.anonymousMode ? "ok" : undefined} />
-              {!c.anonymousMode && c.contact.phone && <StatusRow label="Contact" value={c.contact.phone} />}
+              <SectionHeader title="Contact & privacy" onEdit={() => onEdit(3)} />
+              {c.anonymousMode ? (
+                <StatusRow label="Filing" value="Anonymous" tone="ok" />
+              ) : (
+                <>
+                  <StatusRow label="Name" value={c.contact.fullName || "Not provided"} />
+                  <StatusRow label="Phone" value={c.contact.phone || "Not provided"} />
+                  {c.contact.email && <StatusRow label="Email" value={c.contact.email} />}
+                  {c.contact.state && <StatusRow label="State" value={c.contact.state} />}
+                </>
+              )}
             </Card>
             <Card className="p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-ink">Signature</h3>

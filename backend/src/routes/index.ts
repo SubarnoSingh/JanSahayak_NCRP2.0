@@ -45,6 +45,12 @@ router.post("/volunteers", mc.joinVolunteers);
 router.post("/gov/tafcop-lookup", mc.tafcopLookup);
 router.post("/gov/ceir-block", mc.ceirBlock);
 
+/* ── Officer directory ───────────────────────────────────── */
+router.get("/directory.pdf", mc.directoryPdf);
+
+/* ── Mock data for testing ──────────────────────────────── */
+router.get("/mockdata/test-evidence", mc.testEvidenceDownload);
+
 /* ── IO Command Center (officer-authenticated) ───────────── */
 router.post("/officer/login", oc.login);
 router.get("/officer/queue", oc.queue);
@@ -52,5 +58,6 @@ router.get("/officer/incidents/:id", oc.incidentDetail);
 router.post("/officer/incidents/:id/freeze", oc.triggerFreeze);
 router.post("/officer/incidents/:id/status", oc.setStatus);
 router.get("/officer/incidents/:id/dossier.pdf", oc.dossier);
+router.get("/officer/incidents/:id/evidence/:evidenceId/file", oc.serveEvidenceFile);
 
 export default router;

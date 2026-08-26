@@ -132,7 +132,7 @@ export interface VisionExtraction {
   fields: Partial<{
     utr: string;
     amount: number;
-    bank: string;
+    senderBank: string;
     beneficiaryVpa: string;
     timestamp: string;
   }>;
@@ -157,7 +157,7 @@ export async function extractFromImage(
       {
         role: "system",
         content:
-          'You read Indian payment screenshots (UPI apps, bank apps, SMS). Return ONLY JSON: {utr?:string(12 digits), amount?:number, bank?:string, beneficiaryVpa?:string, timestamp?:string}. Only include fields actually visible. Never guess.',
+          'You read Indian payment screenshots (UPI apps, bank apps, SMS). Return ONLY JSON: {utr?:string(12 digits), amount?:number, senderBank?:string, beneficiaryVpa?:string, timestamp?:string}. Only include fields actually visible. Never guess.',
       },
       {
         role: "user",
@@ -174,7 +174,15 @@ export async function extractFromImage(
   }
   try {
     const parsed = JSON.parse(content);
-    return { available: true, fields: parsed, provider: "openai" };
+    const fields: VisionExtraction["fields"] = {
+      utr: parsed.utr ?? undefined,
+      amount: parsed.amount != null ? Number(parsed.amount) : undefined,
+      senderBank: parsed.senderBank ?? parsed.bank ?? undefined,
+      beneficiaryVpa: parsed.beneficiaryVpa ?? undefined,
+      timestamp: parsed.timestamp ?? undefined,
+    };
+    console.log(`[ai] vision extraction fields: ${JSON.stringify(fields)}`);
+    return { available: true, fields, provider: "openai" };
   } catch {
     return { available: false, reason: "Could not parse extraction result.", fields: {}, provider: "none" };
   }

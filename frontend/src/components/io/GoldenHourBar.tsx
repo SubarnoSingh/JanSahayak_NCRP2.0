@@ -18,10 +18,20 @@ export function GoldenHourBar({
     return () => window.clearInterval(t);
   }, []);
 
-  const start = new Date(startedAt).getTime();
-  const end = start + windowMinutes * 60_000;
+  const startMs = new Date(startedAt).getTime();
+  const isValidStart = Number.isFinite(startMs) && startMs > 0;
+
+  if (!isValidStart) {
+    return (
+      <section aria-label="Golden hour response window" className="rounded-card border border-white/10 bg-white/[0.04] p-4 text-white/60">
+        <p className="text-sm">Response window unavailable — transaction timing not recorded.</p>
+      </section>
+    );
+  }
+
+  const end = startMs + windowMinutes * 60_000;
   const remaining = Math.max(0, end - now);
-  const elapsedPct = Math.min(100, ((now - start) / (end - start)) * 100);
+  const elapsedPct = Math.min(100, ((now - startMs) / (end - startMs)) * 100);
 
   const mm = Math.floor(remaining / 60_000);
   const ss = Math.floor((remaining % 60_000) / 1000);

@@ -6,8 +6,8 @@ import { Footer } from "@/components/layout/Footer";
 import { ComplaintProvider, useComplaint } from "@/components/report/context";
 import { Stepper, StepShell } from "@/components/report/Stepper";
 import { VoiceDescribe } from "@/components/report/VoiceDescribe";
-import { StepDetails } from "@/components/report/StepDetails";
-import { StepEvidence } from "@/components/report/StepEvidence";
+import { StepEvidence, TestEvidenceCard } from "@/components/report/StepEvidence";
+import { MockComplaintCard } from "@/components/report/MockComplaintCard";
 import { StepReview, useRefreshReadiness } from "@/components/report/StepReview";
 import { StepSign } from "@/components/report/StepSign";
 import { SuccessScreen } from "@/components/report/SuccessScreen";
@@ -42,8 +42,8 @@ function ReportFlow() {
 
   // If a signed draft exists (refresh mid-flow), jump back to review.
   useEffect(() => {
-    if (c.acknowledgementNumber) setStep(5);
-    else if (c.signed && step === 0) setStep(3);
+    if (c.acknowledgementNumber) setStep(4);
+    else if (c.signed && step === 0) setStep(2);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -75,6 +75,8 @@ function ReportFlow() {
             amount: t.amount != null ? String(t.amount) : "",
             utr: t.utr ?? "",
             beneficiaryVpa: t.beneficiaryVpa ?? "",
+            senderBank: t.senderBank ?? "",
+            timestamp: t.timestamp ?? "",
           },
         });
       }
@@ -102,7 +104,7 @@ function ReportFlow() {
         `/incidents/${c.incidentId}/submit`
       );
       c.update({ acknowledgementNumber: res.acknowledgementNumber, goldenHourActive: res.goldenHourActive });
-      setStep(5);
+      setStep(4);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Submission failed. Please try again in a moment.";
       setSubmitError(message);
@@ -121,6 +123,7 @@ function ReportFlow() {
           </div>
         </div>
 
+        {/* Step 0: Tell us what happened */}
         {step === 0 &&
           (creating ? (
             <ProcessingState title="Reading your description…" body="Identifying the incident type and key details." />
@@ -128,7 +131,7 @@ function ReportFlow() {
             <StepShell
               title="Tell us what happened"
               intro="Write it the way you'd tell a friend. Dates, amounts, phone numbers — whatever you remember."
-              aside={<ReadinessPanel score={c.readinessScore} breakdown={c.readinessBreakdown} />}
+              aside={<MockComplaintCard />}
             >
               <VoiceDescribe value={c.narrative} onChange={(narrative) => c.update({ narrative })} onSubmit={() => void createIncident()} />
               {submitError && (
@@ -139,39 +142,38 @@ function ReportFlow() {
             </StepShell>
           ))}
 
+        {/* Step 1: Add evidence & detect details */}
         {step === 1 && (
-          <StepShell
-            title="Add important details"
-            intro="Only what's relevant to your case — we've pre-filled what we could detect."
-            aside={<ReadinessPanel score={c.readinessScore} breakdown={c.readinessBreakdown} />}
-          >
-            <StepDetails onBack={() => setStep(0)} onNext={() => setStep(2)} />
-          </StepShell>
-        )}
-
-        {step === 2 && (
           <StepShell
             title="Add evidence"
             intro="Screenshots, receipts, chats — anything that supports what happened."
-            aside={<ReadinessPanel score={c.readinessScore} breakdown={c.readinessBreakdown} />}
+            aside={
+              <>
+                <ReadinessPanel score={c.readinessScore} breakdown={c.readinessBreakdown} />
+                <TestEvidenceCard />
+              </>
+            }
           >
-            <StepEvidence onBack={() => setStep(1)} onNext={() => setStep(3)} />
+            <StepEvidence onBack={() => setStep(0)} onNext={() => setStep(2)} />
           </StepShell>
         )}
 
+        {/* Step 2: Review complaint */}
+        {step === 2 && (
+          <>
+            <StepReview onBack={() => setStep(1)} onEdit={(s) => setStep(s)} onNext={() => setStep(3)} />
+          </>
+        )}
+
+        {/* Step 3: Verify & sign */}
         {step === 3 && (
           <>
-            <StepReview onBack={() => setStep(2)} onEdit={(s) => setStep(s)} onNext={() => setStep(4)} />
+            <SubmitGate onBack={() => setStep(2)} onSigned={() => undefined} submitError={submitError} onSubmit={() => void submitFinal()} />
           </>
         )}
 
-        {step === 4 && (
-          <>
-            <SubmitGate onBack={() => setStep(3)} onSigned={() => undefined} submitError={submitError} onSubmit={() => void submitFinal()} />
-          </>
-        )}
-
-        {step === 5 && <SuccessScreen onNewComplaint={() => window.location.reload()} />}
+        {/* Step 4: Success */}
+        {step === 4 && <SuccessScreen onNewComplaint={() => window.location.reload()} />}
       </main>
       <Footer />
     </div>
@@ -203,7 +205,7 @@ function SubmitGate({
             Submit complaint
           </Button>
           <p className="mt-2 text-2xs text-ink-faint">
-            After submission you'll receive an acknowledgment number for tracking.
+            After submission you&apos;ll receive an acknowledgment number for tracking.
           </p>
           {submitError && (
             <p role="alert" className="mt-3 rounded-control border border-danger/30 bg-danger-tint px-3 py-2 text-xs text-danger">

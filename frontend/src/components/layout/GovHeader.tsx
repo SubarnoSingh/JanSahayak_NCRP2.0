@@ -10,9 +10,9 @@ export function GovHeader() {
 
   const nav = [
     { href: "/", key: "nav.report", match: (p: string) => p === "/" || p.startsWith("/report") },
-    { href: "/track", key: "nav.track", match: (p: string) => p.startsWith("/track") },
     { href: "/protect", key: "nav.protect", match: (p: string) => p.startsWith("/protect") },
     { href: "/learn", key: "nav.learn", match: (p: string) => p.startsWith("/learn") },
+    { href: "/contact", key: "nav.contact", match: (p: string) => p.startsWith("/contact") },
   ];
 
   return (
@@ -22,16 +22,13 @@ export function GovHeader() {
       </a>
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="NCRP 2.0 home">
-          {/* Emblem placeholder — official assets are not used in this prototype */}
-          <span
-            aria-hidden
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-navy/70 text-navy"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <path d="M12 2.8 4 7v10l8 4.2L20 17V7l-8-4.2Z" strokeLinejoin="round" />
-              <path d="M12 8v8m-3.4-5.8L12 8l3.4 2.2" strokeLinecap="round" />
-            </svg>
-          </span>
+          <img
+            src="/emblem_logo.webp"
+            alt="Ashoka Emblem — Government of India"
+            className="h-9 w-9 shrink-0 object-contain"
+            width={36}
+            height={36}
+          />
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-[11px] font-medium uppercase tracking-wide text-ink-faint">
               {t("gov.identity.line1")}

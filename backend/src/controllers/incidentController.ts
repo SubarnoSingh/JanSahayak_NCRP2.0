@@ -77,13 +77,31 @@ export const updateIncident = asyncH(async (req, res) => {
   }
   if (d.transaction) {
     const t = d.transaction;
-    const clean: Partial<ITransaction> = Object.fromEntries(
-      Object.entries(t).filter(([, v]) => v !== "" && v !== undefined)
-    ) as Partial<ITransaction>;
+    const clean: Partial<ITransaction> = {};
+    if (t.utr !== undefined && t.utr !== "") clean.utr = t.utr;
+    if (t.amount != null) clean.amount = t.amount;
+    if (t.timestamp !== undefined && t.timestamp !== "") clean.timestamp = t.timestamp;
+    if (t.senderBank !== undefined && t.senderBank !== "") clean.senderBank = t.senderBank;
+    if (t.beneficiaryVpa !== undefined && t.beneficiaryVpa !== "") clean.beneficiaryVpa = t.beneficiaryVpa;
+    if (t.method !== undefined && t.method !== "") clean.method = t.method;
     clean.source = "citizen";
-    const idx = incident.financial_transactions.findIndex((x) => x.source === "citizen");
-    if (idx >= 0) incident.financial_transactions[idx] = { ...incident.financial_transactions[idx], ...clean };
-    else incident.financial_transactions.push(clean as ITransaction);
+
+    // Merge into existing citizen transaction, or find any transaction to enrich, or create new
+    const citizenIdx = incident.financial_transactions.findIndex((x) => x.source === "citizen");
+    if (citizenIdx >= 0) {
+      incident.financial_transactions[citizenIdx] = { ...incident.financial_transactions[citizenIdx], ...clean };
+      console.log(`[complaint] transaction merged into existing citizen txn #${citizenIdx}`);
+    } else {
+      // Try to merge into an existing AI-sourced transaction
+      const aiIdx = incident.financial_transactions.findIndex((x) => x.source === "ai_vision" || x.source === "ai_text");
+      if (aiIdx >= 0) {
+        incident.financial_transactions[aiIdx] = { ...incident.financial_transactions[aiIdx], ...clean };
+        console.log(`[complaint] transaction merged into existing AI txn #${aiIdx}`);
+      } else {
+        incident.financial_transactions.push(clean as ITransaction);
+        console.log(`[complaint] new transaction created with source=${clean.source}`);
+      }
+    }
     incident.audit_trail.push({ actor: "citizen", action: "Transaction details updated" });
   }
   if (d.suspectIdentifiers) {
@@ -120,6 +138,7 @@ export const addEvidence = asyncH(async (req, res) => {
       : [];
   const smsTexts: string[] = req.body?.smsText ? [String(req.body.smsText)].flat() : [];
 
+  console.log(`[evidence] upload started — ${files.length} file(s) for incident ${String(incident._id)}`);
   const saved = [];
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
@@ -152,6 +171,7 @@ export const addEvidence = asyncH(async (req, res) => {
     };
     incident.evidence.push(meta);
     saved.push(meta);
+    console.log(`[evidence] stored — ${f.originalname} (${f.mimetype}, ${buffer.length} bytes, sha256:${sha256Buffer(buffer).slice(0, 12)}…)`);
 
     // Opportunistic SMS parse when a transaction text is pasted alongside
     if (f.mimetype === "text/plain") {
@@ -177,6 +197,7 @@ export const addEvidence = asyncH(async (req, res) => {
 
 /** POST /api/incidents/:id/evidence/:evidenceId/vision — AI vision extraction */
 export const visionExtract = asyncH(async (req, res) => {
+  console.log(`[evidence] vision extraction started — evidence ${req.params.evidenceId}`);
   const fs = await import("fs/promises");
   const path = await import("path");
   const config = (await import("../config")).config;
@@ -197,6 +218,7 @@ export const visionExtract = asyncH(async (req, res) => {
   const result = await extractFromImage(buffer.toString("base64"), ev.mimeType);
   ev.aiExtraction = result.available ? result.fields : null;
   await incident.save();
+  console.log(`[evidence] vision extraction completed — available=${result.available}, fields=${JSON.stringify(result.fields)}${result.reason ? `, reason=${result.reason}` : ""}`);
   res.json({
     extraction: result.fields,
     available: result.available,
@@ -256,13 +278,25 @@ export const signComplete = asyncH(async (req, res) => {
 
 /** POST /api/incidents/:id/submit */
 export const submit = asyncH(async (req, res) => {
-  const incident = await import("../services/incidentService").then((m) => m.submitIncident(req.params.id));
-  res.json({
-    acknowledgementNumber: incident.acknowledgementNumber,
-    submittedAt: incident.acknowledgementIssuedAt,
-    category: incident.incident_category,
-    goldenHourActive: Boolean(incident.goldenHour),
-  });
+  try {
+    const incident = await import("../services/incidentService").then((m) => m.submitIncident(req.params.id));
+    res.json({
+      acknowledgementNumber: incident.acknowledgementNumber,
+      submittedAt: incident.acknowledgementIssuedAt,
+      category: incident.incident_category,
+      goldenHourActive: Boolean(incident.goldenHour),
+    });
+  } catch (err: any) {
+    if (err.code === "ANONYMOUS_NOT_ALLOWED") {
+      res.status(422).json({ error: { code: "ANONYMOUS_NOT_ALLOWED", message: err.message } });
+      return;
+    }
+    if (err.code === "CONTACT_REQUIRED") {
+      res.status(422).json({ error: { code: "CONTACT_REQUIRED", message: err.message } });
+      return;
+    }
+    throw err;
+  }
 });
 
 /** GET /api/complaints/track/:ackNumber */

@@ -3,10 +3,9 @@ import { useI18n } from "@/lib/i18n";
 
 export const STEPS = [
   { num: "01", key: "Tell us what happened" },
-  { num: "02", key: "Add important details" },
-  { num: "03", key: "Add evidence" },
-  { num: "04", key: "Review" },
-  { num: "05", key: "Verify & sign" },
+  { num: "02", key: "Add evidence" },
+  { num: "03", key: "Review" },
+  { num: "04", key: "Verify & sign" },
 ] as const;
 
 export function Stepper({ current, onJump }: { current: number; onJump?: (step: number) => void }) {

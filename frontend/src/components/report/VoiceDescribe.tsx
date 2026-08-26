@@ -2,7 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/Button";
-import { startDictation, speechSupported, type VoiceSession } from "@/lib/speech";
+import {
+  startDictation,
+  startMediaRecording,
+  speechSupported,
+  secureContextSupported,
+  mediaRecorderSupported,
+  type VoiceSession,
+} from "@/lib/speech";
 
 /** Large dictation area for the first wizard step. */
 export function VoiceDescribe({
@@ -18,26 +25,78 @@ export function VoiceDescribe({
   const [listening, setListening] = useState(false);
   const [partial, setPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [supported, setSupported] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
   const sessionRef = useRef<VoiceSession | null>(null);
+  const fallbackAttempted = useRef(false);
 
   useEffect(() => () => sessionRef.current?.stop(), []);
 
+  // Defer speech-support detection to avoid SSR/client hydration mismatch
+  useEffect(() => {
+    setSupported(speechSupported());
+  }, []);
+
+  const startFallback = async () => {
+    fallbackAttempted.current = true;
+    setUsingFallback(true);
+    setError(null);
+
+    const session = await startMediaRecording(language, {
+      onStart: () => setListening(true),
+      onFinalChunk: (chunk) => {
+        onChange(value ? `${value} ${chunk}` : chunk);
+        setPartial("");
+        setUsingFallback(false);
+      },
+      onError: (_code, msg) => {
+        setError(msg);
+        setListening(false);
+        setUsingFallback(false);
+        sessionRef.current = null;
+      },
+      onEnd: () => {
+        setListening(false);
+        setUsingFallback(false);
+        sessionRef.current = null;
+      },
+    });
+    if (session) {
+      sessionRef.current = session;
+      setListening(true);
+    }
+  };
+
   const toggle = () => {
-    if (listening) {
+    if (listening || sessionRef.current) {
       sessionRef.current?.stop();
       sessionRef.current = null;
       setListening(false);
+      setUsingFallback(false);
       return;
     }
+
+    fallbackAttempted.current = false;
     setError(null);
     setPartial("");
+    setUsingFallback(false);
+
+    // Try Web Speech API first
     sessionRef.current = startDictation(language, {
+      onStart: () => setListening(true),
       onPartial: setPartial,
       onFinalChunk: (chunk) => {
         onChange(value ? `${value} ${chunk}` : chunk);
         setPartial("");
       },
-      onError: (_c, msg) => {
+      onError: (code, msg) => {
+        if (code === "network" && !fallbackAttempted.current) {
+          // Web Speech API can't reach Google — fall back to MediaRecorder + backend Whisper
+          sessionRef.current = null;
+          setListening(false);
+          startFallback();
+          return;
+        }
         setError(msg);
         setListening(false);
         sessionRef.current = null;
@@ -47,16 +106,23 @@ export function VoiceDescribe({
         sessionRef.current = null;
       },
     });
+
     if (sessionRef.current) setListening(true);
   };
 
-  const supported = speechSupported();
+  const browserHint = !secureContextSupported()
+    ? "Voice input requires HTTPS. Please access this page over HTTPS or on localhost."
+    : !supported && !mediaRecorderSupported()
+      ? "Voice input is not supported in this browser. Try Chrome or Edge."
+      : !supported
+        ? "Voice input works best in Chrome / Edge"
+        : null;
 
   return (
     <div>
       <div
         className={`rounded-card border bg-surface transition-all ${
-          listening ? "border-navy/50 shadow-[0_0_0_3px_rgba(30,58,95,0.12)]" : "border-line"
+          listening ? "border-navy/50 shadow-[0-0_0_3px_rgba(30,58,95,0.12)]" : "border-line"
         }`}
       >
         <label htmlFor="describe-input" className="sr-only">
@@ -75,7 +141,7 @@ export function VoiceDescribe({
             type="button"
             onClick={toggle}
             aria-pressed={listening}
-            disabled={!supported}
+            disabled={!supported && !mediaRecorderSupported()}
             className={`inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
               listening ? "border-navy bg-navy text-white" : "border-navy-border bg-surface text-navy hover:bg-navy-tint"
             }`}
@@ -87,13 +153,22 @@ export function VoiceDescribe({
             <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden>
               <path d="M8 1a2.5 2.5 0 0 0-2.5 2.5v5a2.5 2.5 0 0 0 5 0v-5A2.5 2.5 0 0 0 8 1Zm-5 7.5a.9.9 0 1 1 1.8 0 3.2 3.2 0 0 0 6.4 0 .9.9 0 1 1 1.8 0 5 5 0 0 1-4.1 4.92V15H7.1v-1.58A5 5 0 0 1 3 8.5Z" />
             </svg>
-            {listening ? t("launcher.speaking") : t("launcher.speak")}
+            {listening
+              ? usingFallback
+                ? "Recording… tap to stop"
+                : t("launcher.speaking")
+              : t("launcher.speak")}
           </button>
-          {!supported && <span className="text-2xs text-ink-faint">Voice input works best in Chrome / Edge</span>}
+          {browserHint && <span className="text-2xs text-ink-faint">{browserHint}</span>}
         </div>
         {partial && (
           <p lang={language} role="status" className="border-t border-dashed border-navy/25 bg-navy-tint/60 px-4 py-2 text-sm italic leading-relaxed text-navy-deep">
-            {t("launcher.listeningHint")} “{partial}”
+            {t("launcher.listeningHint")} &ldquo;{partial}&rdquo;
+          </p>
+        )}
+        {usingFallback && listening && (
+          <p role="status" className="border-t border-dashed border-navy/25 bg-navy-tint/60 px-4 py-2 text-sm italic leading-relaxed text-navy-deep">
+            Recording your voice — speak now, then tap Stop. Your speech will be converted after you stop.
           </p>
         )}
       </div>
