@@ -1,5 +1,11 @@
 /** Centralized API client with consistent error shape. */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+/**
+ * In production (Vercel), Next.js rewrites proxy /api/* to the backend.
+ * In development, hit localhost directly.
+ */
+const isBrowser = typeof window !== "undefined";
+export const API_URL = isBrowser ? "" : (process.env.API_BACKEND_URL ?? "http://localhost:4000");
 
 export class ApiError extends Error {
   code: string;
@@ -12,8 +18,6 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  // NOTE: options must spread BEFORE headers, otherwise callers' `headers`
-  // would overwrite Content-Type and the server would never parse the body.
   const init: RequestInit = {
     ...options,
     headers: {

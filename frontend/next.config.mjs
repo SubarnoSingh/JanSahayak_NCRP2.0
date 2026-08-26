@@ -1,6 +1,20 @@
+const API_BACKEND = process.env.API_BACKEND_URL || "http://localhost:4000";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${API_BACKEND}/api/:path*`,
+      },
+      {
+        source: "/ws",
+        destination: `${API_BACKEND}/ws`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

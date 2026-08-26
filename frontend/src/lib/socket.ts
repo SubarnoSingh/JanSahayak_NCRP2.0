@@ -1,12 +1,13 @@
 "use client";
 import { io, type Socket } from "socket.io-client";
-import { API_URL } from "./api";
 
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(API_URL, { path: "/ws", transports: ["websocket", "polling"] });
+    const isBrowser = typeof window !== "undefined";
+    const url = isBrowser ? "" : (process.env.API_BACKEND_URL ?? "http://localhost:4000");
+    socket = io(url || undefined, { path: "/ws", transports: ["websocket", "polling"] });
   }
   return socket;
 }
