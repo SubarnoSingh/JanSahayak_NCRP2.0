@@ -4,7 +4,7 @@ services:
     runtime: node
     region: oregon
     plan: free
-    buildCommand: npm install --prefix backend && npm run --prefix backend build
+    buildCommand: npm install --prefix backend --include=dev && npm run --prefix backend build
     startCommand: npm --prefix backend start
     healthCheckPath: /healthz
     envVars:
