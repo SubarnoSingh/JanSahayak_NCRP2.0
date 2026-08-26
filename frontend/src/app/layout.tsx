@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   description:
     "Report cybercrime without navigating a maze. A citizen-first redesign of India's national cybercrime reporting experience.",
   manifest: "/manifest.json",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: "/emblem_logo.webp", apple: "/emblem_logo.webp" },
 };
 
 export const viewport: Viewport = {
