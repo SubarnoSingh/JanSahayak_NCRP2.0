@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: ncrp2-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --prefix backend && npm run --prefix backend build
+    startCommand: npm --prefix backend start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OFFICER_DEMO_EMAIL
+        value: io@ncrp.demo
+      - key: OFFICER_DEMO_PASSWORD
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: BHASHINI_API_KEY
+        sync: false
+      - key: BHASHINI_ENABLED
+        value: "false"
+      - key: CFCFRMS_MODE
+        value: mock
+      - key: EPRAMAAN_MODE
+        value: mock
+      - key: CEIR_MODE
+        value: mock
+      - key: TAFCOP_MODE
+        value: mock
