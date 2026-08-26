@@ -37,7 +37,7 @@ export function SuccessScreen({ onNewComplaint }: { onNewComplaint: () => void }
             </Link>
           )}
           {c.incidentId && (
-            <a href={`http://localhost:4000/api/incidents/${c.incidentId}/acknowledgement.pdf`} download>
+            <a href={`/api/incidents/${c.incidentId}/acknowledgement.pdf`} download>
               <Button variant="secondary" size="md">
                 Download acknowledgement
               </Button>
