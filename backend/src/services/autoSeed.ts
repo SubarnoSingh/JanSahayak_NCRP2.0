@@ -13,20 +13,27 @@ function daysAgo(n: number): Date {
 }
 
 export async function autoSeed(): Promise<void> {
-  const resourceCount = await Resource.countDocuments();
-  if (resourceCount > 0) {
+  const [resourceCount, alertCount] = await Promise.all([
+    Resource.countDocuments(),
+    ScamAlert.countDocuments(),
+  ]);
+  if (resourceCount > 0 && alertCount > 0) {
     console.log("[seed] database already populated — skipping");
     return;
   }
-  console.log("[seed] database empty — seeding demo data...");
+  console.log("[seed] database incomplete — seeding demo data...");
 
-  await Officer.create({
-    email: config.officerDemo.email,
-    name: "Inspector A. Verma",
-    rank: "Inspector",
-    unit: "Cyber Police Station — Demo Range",
-    passwordHash: "demo-only",
-  });
+  await Officer.findOneAndUpdate(
+    { email: config.officerDemo.email },
+    {
+      email: config.officerDemo.email,
+      name: "Inspector A. Verma",
+      rank: "Inspector",
+      unit: "Cyber Police Station — Demo Range",
+      passwordHash: "demo-only",
+    },
+    { upsert: true, new: true }
+  );
 
   const suspects = [
     {
