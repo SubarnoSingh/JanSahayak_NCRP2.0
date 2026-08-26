@@ -23,6 +23,13 @@ export async function autoSeed(): Promise<void> {
   }
   console.log("[seed] database incomplete — seeding demo data...");
 
+  // Clear partial seed data (keep any user-created incidents)
+  await Promise.all([
+    Suspect.deleteMany({}),
+    Resource.deleteMany({}),
+    ScamAlert.deleteMany({}),
+  ]);
+
   await Officer.findOneAndUpdate(
     { email: config.officerDemo.email },
     {
