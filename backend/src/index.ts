@@ -9,6 +9,7 @@ import { config, isProd, validateEnvironment, whisperEffectiveProvider } from ".
 import routes from "./routes";
 import { errorHandler, notFoundHandler } from "./middleware/officerAuth";
 import { setSocketServer } from "./services/notificationService";
+import { autoSeed } from "./services/autoSeed";
 
 async function main(): Promise<void> {
   // Fails fast (with clear messages) only on values required for ANY operation;
@@ -17,6 +18,8 @@ async function main(): Promise<void> {
 
   await mongoose.connect(config.mongoUri);
   console.log("[api] connected to MongoDB");
+
+  await autoSeed();
 
   const app = express();
   app.disable("x-powered-by");
